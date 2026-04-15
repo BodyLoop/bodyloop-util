@@ -140,6 +140,7 @@ def get_axes_payload(client: AuthenticatedClient, selected_viatar_id):
                 pass
 
     return {
+        "viatar_id": str(viatar_id),
         "rows": axes_rows,
         "xy_by_axis_path": xy_by_axis_path,
     }, None
@@ -305,6 +306,7 @@ web_app.layout = html.Div(
                             ],
                             style={"display": "flex", "alignItems": "center", "gap": "0.75rem"},
                         ),
+                        html.Div(id="sync-indicator-a"),
                         html.Div(id="axes-a-container"),
                     ],
                     style={"display": "flex", "flexDirection": "column", "alignItems": "flex-start", "gap": "0.75rem"},
@@ -337,6 +339,7 @@ web_app.layout = html.Div(
                             ],
                             style={"display": "flex", "alignItems": "center", "gap": "0.75rem"},
                         ),
+                        html.Div(id="sync-indicator-b"),
                         html.Div(id="axes-b-container"),
                     ],
                     style={"display": "flex", "flexDirection": "column", "alignItems": "flex-start", "gap": "0.75rem"},
@@ -566,3 +569,30 @@ def load_axes_for_selected_viatars(fetch_a_clicks, fetch_b_clicks, viatar_a_id, 
 )
 def load_delta_view(axes_a_payload, axes_b_payload):
     return build_delta_component(axes_a_payload, axes_b_payload)
+
+
+@callback(
+    Output("sync-indicator-a", "children"),
+    Output("sync-indicator-b", "children"),
+    Input("viatar-dropdown-a", "value"),
+    Input("viatar-dropdown-b", "value"),
+    Input("axes-a-store", "data"),
+    Input("axes-b-store", "data"),
+)
+def show_not_in_sync_indicator(selected_a, selected_b, axes_a_payload, axes_b_payload):
+    def build_indicator(selected_value, payload):
+        if not payload or not payload.get("viatar_id"):
+            return html.Div("No fetched data yet.", style={"color": "#666", "fontSize": "0.9rem"})
+
+        fetched_viatar_id = str(payload.get("viatar_id"))
+        selected_viatar_id = str(selected_value) if selected_value is not None else ""
+
+        if selected_viatar_id != fetched_viatar_id:
+            return html.Div(
+                f"⚠ not-in-sync: selected {selected_viatar_id or '-'} vs fetched {fetched_viatar_id}",
+                style={"color": "#b00020", "fontWeight": "600", "fontSize": "0.9rem"},
+            )
+
+        return html.Div("✓ in sync", style={"color": "#2e7d32", "fontWeight": "600", "fontSize": "0.9rem"})
+
+    return build_indicator(selected_a, axes_a_payload), build_indicator(selected_b, axes_b_payload)
