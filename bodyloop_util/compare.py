@@ -32,6 +32,14 @@ FIELD_LABEL_STYLE = {"marginBottom": "0", "whiteSpace": "nowrap"}
 
 FIELD_INPUT_STYLE = {"width": "16rem"}
 
+BODY_TWO_COLUMN_STYLE = {
+    "display": "grid",
+    "gridTemplateColumns": "1fr auto 1fr",
+    "columnGap": "1.5rem",
+    "alignItems": "start",
+    "marginTop": "1rem",
+}
+
 
 def format_proband_label(proband) -> str:
     given = (proband.name_given or "").strip()
@@ -136,7 +144,18 @@ web_app.layout = html.Div(
                             style={"width": "28rem"},
                         ),
                     ],
-                    style={"display": "flex", "alignItems": "center", "gap": "0.75rem", "marginTop": "1rem"},
+                    style={"display": "flex", "alignItems": "center", "gap": "0.75rem"},
+                ),
+                html.Div(
+                    "",
+                    style={
+                        "display": "flex",
+                        "alignItems": "center",
+                        "justifyContent": "center",
+                        "fontSize": "1.25rem",
+                        "color": "#666",
+                        "minWidth": "2rem",
+                    },
                 ),
                 html.Div(
                     [
@@ -149,10 +168,11 @@ web_app.layout = html.Div(
                             style={"width": "28rem"},
                         ),
                     ],
-                    style={"display": "flex", "alignItems": "center", "gap": "0.75rem", "marginTop": "1rem"},
+                    style={"display": "flex", "alignItems": "center", "gap": "0.75rem"},
                 ),
             ],
             id="body",
+            style=BODY_TWO_COLUMN_STYLE,
         ),
         html.Div(
             [
