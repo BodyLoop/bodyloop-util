@@ -1,8 +1,6 @@
 from dash import Dash, html, dcc, Input, Output, State, callback, no_update, dash_table, ctx
 import json
 import pandas as pd
-import plotly.graph_objects as go
-from plotly.colors import qualitative
 from bodyloop_sdk.client.client import Client, AuthenticatedClient
 from bodyloop_sdk.client.api.authentification import login_api_v2_authentification_token_post
 from bodyloop_sdk.client.models.body_login_api_v2_authentification_token_post import BodyLoginApiV2AuthentificationTokenPost
@@ -65,43 +63,6 @@ def format_viatar_label(viatar_id: int, viatar) -> str:
     return f"{created_at.strftime('%Y-%m-%d %H:%M:%S')} ({viatar_id}) {viatar.note or ''}".strip()
 
 
-def build_polar_plot(vector_specs: list[dict], empty_message: str):
-    if not vector_specs:
-        return html.Div(
-            empty_message,
-            style={"marginTop": "0.75rem", "color": "#666"},
-        )
-
-    figure = go.Figure()
-    color_cycle = qualitative.Plotly
-
-    for index, spec in enumerate(vector_specs):
-        angle_deg = spec["angle_rad"] * 180.0 / 3.141592653589793
-        figure.add_trace(
-            go.Scatterpolar(
-                theta=[angle_deg, angle_deg],
-                r=[0, 1],
-                mode="lines",
-                line={"width": 3, "color": color_cycle[index % len(color_cycle)]},
-                name=spec["axis_path"] or f"axis_{index+1}",
-            )
-        )
-
-    figure.update_layout(
-        showlegend=True,
-        margin={"l": 20, "r": 20, "t": 30, "b": 20},
-        polar={
-            "radialaxis": {"visible": True, "range": [0, 1]},
-            "angularaxis": {"direction": "counterclockwise"},
-        },
-    )
-    return dcc.Graph(
-        figure=figure,
-        config={"displayModeBar": False},
-        style={"marginTop": "0.75rem", "height": "360px", "width": "100%"},
-    )
-
-
 def get_axes_payload(client: AuthenticatedClient, selected_viatar_id):
     if not selected_viatar_id:
         return None, "Select a viatar to load axes."
@@ -160,13 +121,7 @@ def build_axes_component_from_payload(payload: dict):
         style_cell={"textAlign": "left", "padding": "0.35rem"},
     )
 
-    vector_specs = [
-        {"axis_path": axis_path, "angle_rad": angle}
-        for axis_path, angle in payload.get("xy_by_axis_path", {}).items()
-    ]
-    polar_plot = build_polar_plot(vector_specs, "No XY rotation values available for polar plot.")
-
-    return html.Div([axes_table, polar_plot], style={"width": "100%"})
+    return html.Div([axes_table], style={"width": "100%"})
 
 
 def build_delta_component(payload_a: dict | None, payload_b: dict | None):
@@ -180,7 +135,6 @@ def build_delta_component(payload_a: dict | None, payload_b: dict | None):
         return html.Div("No shared XY axis rotations between A and B.", style={"marginTop": "0.75rem", "color": "#666"})
 
     delta_rows = []
-    vector_specs = []
     for axis_path in common_axis_paths:
         diff = float(xy_b[axis_path]) - float(xy_a[axis_path])
         delta_rows.append(
@@ -191,7 +145,6 @@ def build_delta_component(payload_a: dict | None, payload_b: dict | None):
                 "XY Diff (B-A)": round(diff, 6),
             }
         )
-        vector_specs.append({"axis_path": axis_path, "angle_rad": diff})
 
     delta_table = dash_table.DataTable(
         data=delta_rows,
@@ -206,8 +159,7 @@ def build_delta_component(payload_a: dict | None, payload_b: dict | None):
         style_cell={"textAlign": "left", "padding": "0.35rem"},
     )
 
-    delta_plot = build_polar_plot(vector_specs, "No XY delta values available for polar plot.")
-    return html.Div([delta_table, delta_plot], style={"width": "100%"})
+    return html.Div([delta_table], style={"width": "100%"})
 
 web_app.layout = html.Div(
     [
