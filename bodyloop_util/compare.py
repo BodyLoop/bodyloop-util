@@ -1,6 +1,7 @@
 from dash import Dash, html, dcc, Input, Output, State, callback, no_update, dash_table, ctx
 import io
 import json
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import trimesh
@@ -138,6 +139,27 @@ def load_mesh_from_memory(glb_bytes: bytes):
 
 
 def build_mesh_figure(vertices, faces, z_norm, title: str, camera_eye: dict, axis_range: float):
+    # Build a sketch-like silhouette: white filled mesh + black wireframe edges.
+    edges = np.vstack([faces[:, [0, 1]], faces[:, [1, 2]], faces[:, [2, 0]]])
+    edges = np.sort(edges, axis=1)
+    edges = np.unique(edges, axis=0)
+
+    # Keep rendering responsive for very dense meshes.
+    max_edges = 25000
+    if len(edges) > max_edges:
+        edge_indices = np.linspace(0, len(edges) - 1, max_edges, dtype=int)
+        edges = edges[edge_indices]
+
+    x_lines = []
+    y_lines = []
+    z_lines = []
+    for start_idx, end_idx in edges:
+        start = vertices[start_idx]
+        end = vertices[end_idx]
+        x_lines.extend([start[0], end[0], None])
+        y_lines.extend([start[1], end[1], None])
+        z_lines.extend([start[2], end[2], None])
+    
     figure = go.Figure(
         data=[
             go.Mesh3d(
@@ -147,16 +169,28 @@ def build_mesh_figure(vertices, faces, z_norm, title: str, camera_eye: dict, axi
                 i=faces[:, 0],
                 j=faces[:, 1],
                 k=faces[:, 2],
-                intensity=z_norm,
-                colorscale="Viridis",
+                color="white",
                 showscale=False,
-                lighting={"ambient": 0.75, "diffuse": 0.55, "specular": 0.08, "roughness": 0.95, "fresnel": 0.02},
+                flatshading=True,
+                lighting={"ambient": 1.0, "diffuse": 0.0, "specular": 0.0, "roughness": 1.0, "fresnel": 0.0},
                 lightposition={"x": 0, "y": 0, "z": 500},
             )
         ]
     )
+    figure.add_trace(
+        go.Scatter3d(
+            x=x_lines,
+            y=y_lines,
+            z=z_lines,
+            mode="lines",
+            line={"color": "black", "width": 2},
+            hoverinfo="skip",
+            showlegend=False,
+        )
+    )
     figure.update_layout(
         title=title,
+        paper_bgcolor="white",
         scene={
             "aspectmode": "cube",
             "xaxis": {"range": [-axis_range, axis_range], "visible": False},
