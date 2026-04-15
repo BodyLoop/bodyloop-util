@@ -1,4 +1,6 @@
-from dash import Dash, html, dcc, Input, Output, State, callback, no_update
+from dash import Dash, html, dcc, Input, Output, State, callback, no_update, dash_table
+import json
+import pandas as pd
 from bodyloop_sdk.client.client import Client, AuthenticatedClient
 from bodyloop_sdk.client.api.authentification import login_api_v2_authentification_token_post
 from bodyloop_sdk.client.models.body_login_api_v2_authentification_token_post import BodyLoginApiV2AuthentificationTokenPost
@@ -8,6 +10,9 @@ from bodyloop_sdk.client.api.probands import (
 )
 from bodyloop_sdk.client.api.viatars import (
     get_viatar_api_v2_viatars_viatar_id_get,
+)
+from bodyloop_sdk.client.api.markers_and_measures import (
+    get_axes_api_v2_viatars_viatar_id_axes_get
 )
 
 web_app = Dash(__name__)
@@ -56,6 +61,47 @@ def format_proband_label(proband) -> str:
 def format_viatar_label(viatar_id: int, viatar) -> str:
     created_at = getattr(getattr(viatar, "meta", None), "crtime", None)
     return f"{created_at.strftime('%Y-%m-%d %H:%M:%S')} ({viatar_id}) {viatar.note or ''}".strip()
+
+
+def build_axes_component(client: AuthenticatedClient, selected_viatar_id):
+    if not selected_viatar_id:
+        return html.Div("Select a viatar to load axes.", style={"marginTop": "0.75rem", "color": "#666"})
+
+    try:
+        viatar_id = int(selected_viatar_id)
+    except (TypeError, ValueError):
+        return html.Div("Invalid viatar selection.", style={"marginTop": "0.75rem", "color": "#b00020"})
+
+    axes = get_axes_api_v2_viatars_viatar_id_axes_get.sync(
+        client=client,
+        viatar_id=viatar_id,
+    )
+
+    if not axes:
+        return html.Div("No axes found for this viatar.", style={"marginTop": "0.75rem", "color": "#666"})
+
+    # Axis instances are SDK model objects. Convert via to_dict() so all values are JSON-safe.
+    axes_rows = []
+    for axis in axes:
+        axis_dict = axis.to_dict() if hasattr(axis, "to_dict") else {}
+        axes_rows.append(
+            {
+                "Axis Path": axis_dict.get("axis_path", ""),
+                "Rotation": json.dumps(axis_dict.get("rotation", None), ensure_ascii=False),
+            }
+        )
+
+    axes_df = pd.DataFrame(axes_rows, columns=["Axis Path", "Rotation"])
+    if axes_df.empty:
+        return html.Div("No axes found for this viatar.", style={"marginTop": "0.75rem", "color": "#666"})
+
+    return dash_table.DataTable(
+        data=axes_df.to_dict("records"),
+        columns=[{"name": col, "id": col} for col in axes_df.columns],
+        page_size=12,
+        style_table={"marginTop": "0.75rem", "overflowX": "auto"},
+        style_cell={"textAlign": "left", "padding": "0.35rem"},
+    )
 
 web_app.layout = html.Div(
     [
@@ -143,8 +189,9 @@ web_app.layout = html.Div(
                             placeholder="Select a proband to fetch viatars",
                             style={"width": "28rem"},
                         ),
+                        html.Div(id="axes-a-container"),
                     ],
-                    style={"display": "flex", "alignItems": "center", "gap": "0.75rem"},
+                    style={"display": "flex", "flexDirection": "column", "alignItems": "flex-start", "gap": "0.75rem"},
                 ),
                 html.Div(
                     "",
@@ -167,8 +214,9 @@ web_app.layout = html.Div(
                             placeholder="Select a proband to fetch viatars",
                             style={"width": "28rem"},
                         ),
+                        html.Div(id="axes-b-container"),
                     ],
-                    style={"display": "flex", "alignItems": "center", "gap": "0.75rem"},
+                    style={"display": "flex", "flexDirection": "column", "alignItems": "flex-start", "gap": "0.75rem"},
                 ),
             ],
             id="body",
@@ -321,3 +369,32 @@ def load_viatars_for_proband(selected_proband_id, auth_data):
     selected_a = options[0]["value"]
     selected_b = options[1]["value"] if len(options) > 1 else options[0]["value"]
     return options, selected_a, options, selected_b
+
+
+@callback(
+    Output("axes-a-container", "children"),
+    Output("axes-b-container", "children"),
+    Input("viatar-dropdown-a", "value"),
+    Input("viatar-dropdown-b", "value"),
+    State("auth-store", "data"),
+    prevent_initial_call=True,
+)
+def load_axes_for_selected_viatars(viatar_a_id, viatar_b_id, auth_data):
+    if not auth_data:
+        return html.Div("Load credentials first."), html.Div("Load credentials first.")
+
+    base_url = auth_data.get("base_url")
+    api_token = auth_data.get("api_token")
+    if not base_url or not api_token:
+        return html.Div("Load credentials first."), html.Div("Load credentials first.")
+
+    client = AuthenticatedClient(
+        base_url=base_url,
+        verify_ssl=False,
+        token=api_token,
+        timeout=10.0,
+    )
+
+    axes_a_component = build_axes_component(client, viatar_a_id)
+    axes_b_component = build_axes_component(client, viatar_b_id)
+    return axes_a_component, axes_b_component
