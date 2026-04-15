@@ -1,3 +1,4 @@
+import typer
 from dash import Dash, html, dcc, Input, Output, State, dash_table, callback, no_update
 import base64
 import os
@@ -23,9 +24,9 @@ from bodyloop_sdk.client.api.markers_and_measures import (
     get_heights_api_v2_viatars_viatar_id_heights_get
 )
 
-app = Dash(__name__)
+web_app = Dash(__name__)
 
-app.layout = html.Div(
+web_app.layout = html.Div(
     [
         html.H2("Synchronize Probands and Results with BodyLoop"),
         dcc.Upload(
@@ -374,8 +375,20 @@ def download(n_clicks, content_string, filename):
 
     return dcc.send_bytes(lambda buffer: buffer.write(file_bytes), download_name)
 
+cli_app = typer.Typer()
+
+@cli_app.command()
+def sync():
+    """Syncs probands and results with BodyLoop. Open the web interface to upload an Excel file and sync it with BodyLoop."""
+    web_app.run(debug=True, host="0.0.0.0")
+    
+@cli_app.callback(invoke_without_command=True)
+def no_command(ctx: typer.Context):
+    if ctx.invoked_subcommand is None:
+        typer.echo(ctx.get_help())
+
 def main():
-    app.run(debug=True, host="0.0.0.0")
+    cli_app()
 
 if __name__ == "__main__":
     main()
