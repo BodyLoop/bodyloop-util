@@ -137,7 +137,7 @@ def load_mesh_from_memory(glb_bytes: bytes):
     return mesh
 
 
-def build_mesh_figure(vertices, faces, z_norm, title: str, camera_eye: dict):
+def build_mesh_figure(vertices, faces, z_norm, title: str, camera_eye: dict, axis_range: float):
     figure = go.Figure(
         data=[
             go.Mesh3d(
@@ -150,15 +150,24 @@ def build_mesh_figure(vertices, faces, z_norm, title: str, camera_eye: dict):
                 intensity=z_norm,
                 colorscale="Viridis",
                 showscale=False,
-                lighting={"ambient": 0.4, "diffuse": 0.8, "specular": 0.3},
-                lightposition={"x": 100, "y": 200, "z": 300},
+                lighting={"ambient": 0.75, "diffuse": 0.55, "specular": 0.08, "roughness": 0.95, "fresnel": 0.02},
+                lightposition={"x": 0, "y": 0, "z": 500},
             )
         ]
     )
     figure.update_layout(
         title=title,
-        scene={"aspectmode": "data", "camera": {"eye": camera_eye}},
-        height=480,
+        scene={
+            "aspectmode": "cube",
+            "xaxis": {"range": [-axis_range, axis_range], "visible": False},
+            "yaxis": {"range": [-axis_range, axis_range], "visible": False},
+            "zaxis": {"range": [-axis_range, axis_range], "visible": False},
+            "camera": {
+                "eye": camera_eye,
+                "projection": {"type": "orthographic"},
+            },
+        },
+        height=760,
         margin={"l": 10, "r": 10, "t": 40, "b": 10},
     )
     return figure
@@ -195,21 +204,32 @@ def build_model_component(client: AuthenticatedClient, selected_viatar_id):
         if len(vertices) == 0 or len(faces) == 0:
             return html.Div("3D model has no visible geometry.", style={"marginTop": "0.75rem", "color": "#666"})
 
-        z_norm = (vertices[:, 2] - vertices[:, 2].min()) / (vertices[:, 2].max() - vertices[:, 2].min() + 1e-8)
+        # Center the model by its bounding-box midpoint so camera z=0 is exactly model mid-height.
+        bbox_min = vertices.min(axis=0)
+        bbox_max = vertices.max(axis=0)
+        bbox_center = (bbox_min + bbox_max) / 2.0
+        vertices_centered = vertices - bbox_center
+
+        z_norm = (vertices_centered[:, 2] - vertices_centered[:, 2].min()) / (
+            vertices_centered[:, 2].max() - vertices_centered[:, 2].min() + 1e-8
+        )
+        axis_range = float(abs(vertices_centered).max()) * 1.02
 
         figure_primary = build_mesh_figure(
-            vertices,
+            vertices_centered,
             faces,
             z_norm,
-            title="3D Viewer (Primary)",
-            camera_eye={"x": 1.5, "y": 1.5, "z": 1.5},
+            title="3D Viewer (Side View)",
+            camera_eye={"x": 1.1, "y": 0.0, "z": 0.0},
+            axis_range=axis_range,
         )
         figure_secondary = build_mesh_figure(
-            vertices,
+            vertices_centered,
             faces,
             z_norm,
-            title="3D Viewer (Secondary)",
-            camera_eye={"x": -1.5, "y": 1.5, "z": 1.0},
+            title="3D Viewer (Front View)",
+            camera_eye={"x": 0.0, "y": -1.1, "z": 0.0},
+            axis_range=axis_range,
         )
     except Exception as exc:
         return html.Div(f"Failed to render 3D model: {exc}", style={"marginTop": "0.75rem", "color": "#b00020"})
@@ -219,15 +239,21 @@ def build_model_component(client: AuthenticatedClient, selected_viatar_id):
             dcc.Graph(
                 figure=figure_primary,
                 config={"displayModeBar": True},
-                style={"marginTop": "0.75rem", "width": "100%"},
+                style={"marginTop": "0.75rem", "width": "100%", "height": "760px"},
             ),
             dcc.Graph(
                 figure=figure_secondary,
                 config={"displayModeBar": True},
-                style={"marginTop": "0.75rem", "width": "100%"},
+                style={"marginTop": "0.75rem", "width": "100%", "height": "760px"},
             ),
         ],
-        style={"width": "100%"},
+        style={
+            "width": "100%",
+            "display": "grid",
+            "gridTemplateColumns": "1fr 1fr",
+            "columnGap": "0.75rem",
+            "alignItems": "start",
+        },
     )
 
 
