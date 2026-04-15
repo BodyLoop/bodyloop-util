@@ -121,9 +121,22 @@ web_app.layout = html.Div(
         ),
         html.Div(
             [
-                html.Label("Viatar", style=FIELD_LABEL_STYLE),
+                html.Label("Viatar A", style=FIELD_LABEL_STYLE),
                 dcc.Dropdown(
-                    id="viatar-dropdown",
+                    id="viatar-dropdown-a",
+                    options=[],
+                    value=None,
+                    placeholder="Select a proband to fetch viatars",
+                    style={"width": "28rem"},
+                ),
+            ],
+            style={"display": "flex", "alignItems": "center", "gap": "0.75rem", "marginTop": "1rem"},
+        ),
+        html.Div(
+            [
+                html.Label("Viatar B", style=FIELD_LABEL_STYLE),
+                dcc.Dropdown(
+                    id="viatar-dropdown-b",
                     options=[],
                     value=None,
                     placeholder="Select a proband to fetch viatars",
@@ -142,8 +155,10 @@ web_app.layout = html.Div(
     Output("load-info", "children"),
     Output("proband-dropdown", "options"),
     Output("proband-dropdown", "value"),
-    Output("viatar-dropdown", "options"),
-    Output("viatar-dropdown", "value"),
+    Output("viatar-dropdown-a", "options"),
+    Output("viatar-dropdown-a", "value"),
+    Output("viatar-dropdown-b", "options"),
+    Output("viatar-dropdown-b", "value"),
     Output("auth-store", "data"),
     Input("load-button", "n_clicks"),
     State("base-url-input", "value"),
@@ -153,10 +168,10 @@ web_app.layout = html.Div(
 )
 def compare(n_clicks, base_url, username, password):
     if not n_clicks:
-        return no_update, no_update, no_update, no_update, no_update, no_update
+        return no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update
     
     if not base_url or not username or not password:
-        return "Please fill in all fields.", [], None, [], None, None
+        return "Please fill in all fields.", [], None, [], None, [], None, None
     
    
     try:
@@ -175,12 +190,12 @@ def compare(n_clicks, base_url, username, password):
             )
         )
     except Exception as e:
-        return f"Could not connect to {base_url}. Please check the URL and that BodyLoop is running. {e}", [], None, [], None, None
+        return f"Could not connect to {base_url}. Please check the URL and that BodyLoop is running. {e}", [], None, [], None, [], None, None
 
     if response.status_code == 200:
         api_token = response.parsed.access_token
     else:
-        return "Login failed. Please check your credentials and try again.", [], None, [], None, None
+        return "Login failed. Please check your credentials and try again.", [], None, [], None, [], None, None
 
     client = AuthenticatedClient(
         base_url=base_url,
@@ -200,37 +215,39 @@ def compare(n_clicks, base_url, username, password):
     options.sort(key=lambda option: option["label"].lower())
 
     if not options:
-        return "No probands found.", [], None, [], None, {
+        return "No probands found.", [], None, [], None, [], None, {
             "base_url": base_url,
             "api_token": api_token,
         }
     
-    return f"Loaded {len(options)} probands.", options, options[0]["value"], [], None, {
+    return f"Loaded {len(options)} probands.", options, options[0]["value"], [], None, [], None, {
         "base_url": base_url,
         "api_token": api_token,
     }
 
 
 @callback(
-    Output("viatar-dropdown", "options", allow_duplicate=True),
-    Output("viatar-dropdown", "value", allow_duplicate=True),
+    Output("viatar-dropdown-a", "options", allow_duplicate=True),
+    Output("viatar-dropdown-a", "value", allow_duplicate=True),
+    Output("viatar-dropdown-b", "options", allow_duplicate=True),
+    Output("viatar-dropdown-b", "value", allow_duplicate=True),
     Input("proband-dropdown", "value"),
     State("auth-store", "data"),
     prevent_initial_call=True,
 )
 def load_viatars_for_proband(selected_proband_id, auth_data):
     if not selected_proband_id or not auth_data:
-        return [], None
+        return [], None, [], None
 
     base_url = auth_data.get("base_url")
     api_token = auth_data.get("api_token")
     if not base_url or not api_token:
-        return [], None
+        return [], None, [], None
 
     try:
         proband_id = int(selected_proband_id)
     except (TypeError, ValueError):
-        return [], None
+        return [], None, [], None
 
     client = AuthenticatedClient(
         base_url=base_url,
@@ -244,7 +261,7 @@ def load_viatars_for_proband(selected_proband_id, auth_data):
         proband_id=proband_id,
     )
     if not details_of_selected_proband or not details_of_selected_proband.viatars:
-        return [], None
+        return [], None, [], None
 
     options = []
     for viatar_ref in details_of_selected_proband.viatars:
@@ -263,8 +280,10 @@ def load_viatars_for_proband(selected_proband_id, auth_data):
         )
 
     if not options:
-        return [], None
+        return [], None, [], None
 
     options.reverse()
 
-    return options, options[0]["value"]
+    selected_a = options[0]["value"]
+    selected_b = options[1]["value"] if len(options) > 1 else options[0]["value"]
+    return options, selected_a, options, selected_b
