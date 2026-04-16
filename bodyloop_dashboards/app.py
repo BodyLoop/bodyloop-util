@@ -295,26 +295,34 @@ def sync(n_clicks, content_string, base_url, username, password):
         height_dict = {height.height_path: height.height for height in heights}
         
         try:
-            players.at[idx, 'HEIGHT_DIFF_SHOULDERS (cm)'] = round((height_dict['arm.acromion.R'] - height_dict['arm.acromion.L']) * 100, 1)
-            columns_to_consider.append('HEIGHT_DIFF_SHOULDERS (cm)')
+            column = 'HEIGHT_DIFF_SHOULDERS (cm)'
+            if column in players.columns:
+                players.at[idx, column] = round((height_dict['arm.acromion.R'] - height_dict['arm.acromion.L']) * 100, 1)
+                columns_to_consider.append(column)
         except KeyError:
             pass
         
         try:
-            players.at[idx, 'HEIGHT_DIFF_HIP (cm)'] = round((height_dict['torso.asis.R'] - height_dict['torso.asis.L']) * 100, 1)
-            columns_to_consider.append('HEIGHT_DIFF_HIP (cm)')
+            column = 'HEIGHT_DIFF_HIP (cm)'
+            if column in players.columns:
+                players.at[idx, column] = round((height_dict['torso.asis.R'] - height_dict['torso.asis.L']) * 100, 1)
+                columns_to_consider.append(column)
         except KeyError:
             pass
         
         try:
-            players.at[idx, 'HEIGHT_DIFF_KNEE (cm)'] = round((height_dict['leg.femur.epicondyle.lateral.R'] - height_dict['leg.femur.epicondyle.lateral.L']) * 100, 1)
-            columns_to_consider.append('HEIGHT_DIFF_KNEE (cm)')
+            column = 'HEIGHT_DIFF_KNEE (cm)'
+            if column in players.columns:
+                players.at[idx, column] = round((height_dict['leg.femur.epicondyle.lateral.R'] - height_dict['leg.femur.epicondyle.lateral.L']) * 100, 1)
+                columns_to_consider.append(column)
         except KeyError:
             pass
         
         try:
-            players.at[idx, 'HEIGHT_DIFF_ANKLE (cm)'] = round((height_dict['leg.lateral.malleolus.R'] - height_dict['leg.lateral.malleolus.L']) * 100, 1)
-            columns_to_consider.append('HEIGHT_DIFF_ANKLE (cm)')
+            column = 'HEIGHT_DIFF_ANKLE (cm)'
+            if column in players.columns:
+                players.at[idx, column] = round((height_dict['leg.lateral.malleolus.R'] - height_dict['leg.lateral.malleolus.L']) * 100, 1)
+                columns_to_consider.append(column)
         except KeyError:
             pass
 
