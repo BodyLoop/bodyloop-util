@@ -8,6 +8,28 @@ Several dashboards for exploring and visualizing [BodyLoop](http://bodyloop.life
 
 - [uv](https://docs.astral.sh/uv/)
 
+#### Install `uv` on Windows
+
+In PowerShell, run:
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+#### Install `uv` on macOS
+
+Using Homebrew:
+
+```bash
+brew install uv
+```
+
+Or using the official installer:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
 ### One-shot run
 
 You can use `uvx` to run the tool without installing it:
