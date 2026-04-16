@@ -105,6 +105,16 @@ def make_results_filename(filename: str) -> str:
     return f"{basename}__results_{timestamp}{ext}"
 
 
+def split_player_name(full_name: str) -> tuple[str, str]:
+    """name_family shall be the last word, all other words shall be inside name_given"""
+    parts = str(full_name).split()
+    if not parts:
+        return "", ""
+    if len(parts) == 1:
+        return "", parts[0]
+    return " ".join(parts[:-1]), parts[-1]
+
+
 @callback(
     Output("stored-file-content", "data"),
     Output("stored-file-name", "data"),
@@ -204,7 +214,7 @@ def sync(n_clicks, content_string, base_url, username, password):
     for player in players[players["proband_id"].isna()].itertuples():
         print(f"{player.PLAYER_NAME} {player.PLAYER_BIRTHDAY.date()} couldn't be found by its PLAYER_ID. Try to find match by name and birthdate")
         
-        (name_given, name_family) = player.PLAYER_NAME.split(" ")
+        (name_given, name_family) = split_player_name(player.PLAYER_NAME)
         print(f"name_given: {name_given} name_family: {name_family}")
         
         matching_probands = probands[(probands["name_given"] == name_given) & (probands["name_family"] == name_family) & (probands["date_of_birth"] == player.PLAYER_BIRTHDAY.date().isoformat())]
@@ -230,7 +240,7 @@ def sync(n_clicks, content_string, base_url, username, password):
         
         if (f"{proband.name_given} {proband.name_family}" != f"{player.PLAYER_NAME}"):
             print(f"Updating name and birthdate for {player.PLAYER_NAME}")
-            (name_given, name_family) = player.PLAYER_NAME.split(" ")
+            (name_given, name_family) = split_player_name(player.PLAYER_NAME)
         
             modified_proband = update_proband_api_v2_probands_proband_id_patch.sync(
                 client=client,
@@ -247,7 +257,7 @@ def sync(n_clicks, content_string, base_url, username, password):
     for player in players[players["proband_id"].isna()].itertuples():
         print(f"{player.PLAYER_NAME} {player.PLAYER_BIRTHDAY.date()} couldn't be found by its PLAYER_ID and name. Creating new proband.")
 
-        (name_given, name_family) = player.PLAYER_NAME.split(" ")
+        (name_given, name_family) = split_player_name(player.PLAYER_NAME)
         created_proband = create_proband_api_v2_probands_post.sync(
             client=client,
             body=ProbandData(
