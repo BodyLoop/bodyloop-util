@@ -1,12 +1,13 @@
 from dash import Dash, html, dcc
 
-from bodyloop_dashboards.pages import sync_excel, scan_compare
+from bodyloop_dashboards.pages import sync_excel, scan_compare, login
 
 app = Dash(__name__)
 
 app.layout = html.Div(
     [
         html.H2("BodyLoop Dashboards"),
+        login.layout,
         dcc.Tabs(
             id="main-tabs",
             value="sync-excel",
