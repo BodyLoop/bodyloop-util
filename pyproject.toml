@@ -1,11 +1,10 @@
 [project]
-name = "bodyloop-util"
+name = "bodyloop-dashboards"
 version = "0.1.0"
-description = "BodyLoop Utilities"
+description = "BodyLoop Dashboards"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "typer>=0.16.0",
     "bodyloop-sdk>=2026.4.13.2",
     "dash>=3.0.0",
     "openpyxl>=3.1.5",
@@ -13,7 +12,7 @@ dependencies = [
 ]
 
 [project.scripts]
-bodyloop-util = "bodyloop_util.cli:main"
+bodyloop-dashboards = "bodyloop_dashboards.app:main"
 
 [tool.uv]
 package = true
