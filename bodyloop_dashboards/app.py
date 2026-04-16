@@ -375,7 +375,7 @@ def download(n_clicks, content_string, filename):
     return dcc.send_bytes(lambda buffer: buffer.write(file_bytes), download_name)
 
 def main():
-    app.run(debug=True, host="0.0.0.0")
+    app.run(debug=True)
 
 if __name__ == "__main__":
     main()
