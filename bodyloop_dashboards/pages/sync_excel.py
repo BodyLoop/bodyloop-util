@@ -23,7 +23,6 @@ from bodyloop_sdk.client.api.markers_and_measures import (
     get_heights_api_v2_viatars_viatar_id_heights_get
 )
 
-
 layout = dcc.Tab(
     label="Sync Excel",
     value="sync-excel",
@@ -257,6 +256,9 @@ def sync(n_clicks, content_string, base_url, username, password):
 
     # Get the most recent scan for each player and print it out
     for idx, player in players.iterrows():
+        if pd.isna(player.viatar_id):
+            continue
+
         specific_proband = get_proband_api_v2_probands_proband_id_get.sync(
             client=client,
             proband_id=player.proband_id
